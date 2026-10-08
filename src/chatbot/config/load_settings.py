@@ -17,7 +17,7 @@ def load_settings(env_path: str = ".env") -> Settings:
         return vals.get(key) or os.environ.get(key) or default
 
     api_key = get_val("GEMINI_API_KEY", "").strip()
-    model = get_val("GEMINI_MODEL", "gemini-1.5-flash").strip()
+    model = get_val("GEMINI_MODEL", "gemini-3.5-flash").strip()
     if not model:
         raise SettingsError("GEMINI_MODEL không được để trống")
 

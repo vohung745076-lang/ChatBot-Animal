@@ -8,7 +8,7 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     non_existent = tmp_path / ".env.none"
     s = load_settings(str(non_existent))
-    assert s.gemini_model == "gemini-1.5-flash"
+    assert s.gemini_model == "gemini-3.5-flash"
     assert s.host == "127.0.0.1"
     assert s.port == 2610
     assert s.gemini_temperature == 0.2

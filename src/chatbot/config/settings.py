@@ -6,7 +6,7 @@ from dataclasses import dataclass
 class Settings:
     """Chứa toàn bộ thông số vận hành của VetChatbot."""
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-3.5-flash"
     gemini_temperature: float = 0.2
     gemini_timeout: int = 30
     host: str = "127.0.0.1"

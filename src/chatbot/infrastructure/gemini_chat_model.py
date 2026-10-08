@@ -22,10 +22,17 @@ class GeminiChatModel(ChatModel):
         user_text: str
     ) -> str:
         key = self.store.get()
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{self.settings.gemini_model}:generateContent?key={key}"
-        )
+        models_to_try = [self.settings.gemini_model]
+        fallbacks = [
+            "gemini-3.5-flash",
+            "gemini-3.1-flash-lite",
+            "gemini-flash-lite-latest",
+            "gemini-3.8-flash"
+        ]
+        for fb in fallbacks:
+            if fb not in models_to_try:
+                models_to_try.append(fb)
+
         contents = []
         for h in history:
             role = "user" if h.role == "human" else "model"
@@ -38,32 +45,38 @@ class GeminiChatModel(ChatModel):
             "generationConfig": {"temperature": self.settings.gemini_temperature}
         }
 
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": key,
-        }
-        if key.startswith("AQ.") or "." in key:
-            headers["Authorization"] = f"Bearer {key}"
+        headers = {"Content-Type": "application/json", "x-goog-api-key": key}
+        last_error = None
 
-        try:
-            res = requests.post(url, headers=headers, json=payload, timeout=self.settings.gemini_timeout)
-            if not res.ok:
-                data = res.json().get("error", {})
-                msg = data.get("message", res.text)
-                code = res.status_code
-                raise UpstreamError(code, f"Lỗi Google Gemini ({code}): {msg}")
+        for mdl in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{mdl}:generateContent?key={key}"
+            try:
+                res = requests.post(url, headers=headers, json=payload, timeout=self.settings.gemini_timeout)
+                if not res.ok:
+                    data = res.json().get("error", {})
+                    msg = data.get("message", res.text)
+                    if res.status_code in (404, 429, 503) and mdl != models_to_try[-1]:
+                        continue
+                    status, mapped = map_gemini_error(Exception(f"{res.status_code} {msg}"))
+                    raise UpstreamError(status, mapped)
 
-            data = res.json()
-            candidates = data.get("candidates", [])
-            if not candidates:
-                raise UpstreamError(502, "Mô hình trả về chuỗi rỗng")
-            parts = candidates[0].get("content", {}).get("parts", [])
-            ans = "".join(p.get("text", "") for p in parts).strip()
-            if not ans:
-                raise UpstreamError(502, "Mô hình trả về nội dung rỗng")
-            return ans
-        except UpstreamError:
-            raise
-        except Exception as exc:
-            status, msg = map_gemini_error(exc)
-            raise UpstreamError(status, msg) from exc
+                data = res.json()
+                cands = data.get("candidates", [])
+                if not cands:
+                    raise UpstreamError(502, "Mô hình trả về chuỗi rỗng")
+                parts = cands[0].get("content", {}).get("parts", [])
+                ans = "".join(p.get("text", "") for p in parts).strip()
+                if not ans:
+                    raise UpstreamError(502, "Mô hình trả về nội dung rỗng")
+                return ans
+            except UpstreamError:
+                raise
+            except requests.RequestException as req_err:
+                last_error = req_err
+                if mdl != models_to_try[-1]:
+                    continue
+            except Exception as exc:
+                last_error = exc
+
+        status, mapped_msg = map_gemini_error(last_error or Exception("Không thể kết nối"))
+        raise UpstreamError(status, mapped_msg)
