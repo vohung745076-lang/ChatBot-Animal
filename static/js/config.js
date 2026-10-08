@@ -10,5 +10,5 @@ const isLocal = typeof window !== "undefined" && (
 );
 
 export const API_BASE_URL = window.VET_API_BASE_URL ||
-  (isLocal ? "" : (localStorage.getItem("vet_api_base_url") || "https://vetchatbot-backend.onrender.com"));
+  (isLocal ? "" : (localStorage.getItem("vet_api_base_url") || "https://chatbot-animal.onrender.com"));
 
