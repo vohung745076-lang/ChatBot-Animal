@@ -1,0 +1,20 @@
+# Moi truong ao Python
+.venv/
+env/
+venv/
+
+# Du lieu tam & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# TEP BI MAT & DU LIEU NHAY CAM (NGHIEM CAM DUA LEN GIT)
+.env
+memory.json
+*.corrupt-*
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
